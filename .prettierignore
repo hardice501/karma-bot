@@ -1,0 +1,12 @@
+# Node.js
+node_modules/
+package-lock.json
+
+# configurations
+tsconfig.json
+eslint.config.mjs
+
+# .github
+.github/
+*.yml
+*.yaml
