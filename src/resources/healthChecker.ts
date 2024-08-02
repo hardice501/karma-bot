@@ -18,7 +18,7 @@ const defaultObserver: Observer<unknown> = {
 };
 
 export const conditions = {
-    // mongoDSInit: Requisite('mongoDSInit', 10000),
+    mongoDSInit: Requisite('mongoDSInit', 10000),
 };
 
 export default FulguriteIgnitor(conditions, defaultObserver);

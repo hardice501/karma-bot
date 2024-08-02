@@ -5,29 +5,6 @@ import _ from 'lodash';
 // https://man7.org/linux/man-pages/man7/environ.7.html
 const environ = [
     'NODE_ENV',
-    'HOME',
-    'SHELL',
-    'USER',
-    'PATH',
-    'LANG',
-    'TERM',
-    'DISPLAY',
-    'EDITOR',
-    'LOGNAME',
-    'MAIL',
-    'MANPATH',
-    'PWD',
-    'OLDPWD',
-    'PS1',
-    'PS2',
-    'HOSTNAME',
-    'HOSTTYPE',
-    'OSTYPE',
-    'MACHTYPE',
-    'IFS',
-    'SUDO_USER',
-    'SUDO_UID',
-    'SUDO_GID',
 ];
 const configFromDotenv = _.get(dotenv.config(), 'parsed');
 const configFromEnv = process.env || {};
