@@ -5,13 +5,9 @@ import addFormats from 'ajv-formats';
 // 더 좋은 방법이 있는지 의견을 여쭙고자 NOTE 남겨봅니다.
 const _ajv = new Ajv({ coerceTypes: true });
 
-export const passwordRegExp =
-    /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!\"#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~])[A-Za-z\d!\"#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~]{8,18}$/;
+export const passwordRegExp = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!\"#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~])[A-Za-z\d!\"#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~]{8,18}$/;
 
 addFormats(_ajv);
-
-// 전화번호는 국제전화번호(E164 규격) 형식이어야 합니다. 예) +82 1012345678
-// _ajv.addFormat('phone_number', /^\+\d{1,3}(\s\d{0,4})?\s\d{1,14}$/);
 
 // 전화번호는 01012345678 형식이어야 합니다.
 _ajv.addFormat('phone_number', /^\d{3}\d{4}\d{4}$/);
