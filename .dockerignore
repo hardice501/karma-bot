@@ -1,0 +1,6 @@
+.idea
+.git
+src/docker/Dockerfile
+*docker-compose*
+node_modules
+npm-debug.log

@@ -1,0 +1,51 @@
+{
+    "$schema": "https://biomejs.dev/schemas/1.7.3/schema.json",
+    "organizeImports": { "enabled": true },
+    "files": {
+        "ignore": ["node_modules/", "dist/", "package-lock.json", "tsconfig.*.json", "tsconfig.json"]
+    },
+    "formatter": {
+        "enabled": true,
+        "formatWithErrors": false,
+        "indentStyle": "space",
+        "indentWidth": 4,
+        "lineEnding": "lf",
+        "lineWidth": 120,
+        "attributePosition": "auto",
+        "ignore": [
+            "venv/",
+            "node_modules/",
+            "dist/",
+            "package-lock.json",
+            "tsconfig.*.json",
+            "tsconfig.json",
+            "eslint.config.mjs",
+            ".github/",
+            "*.yml",
+            "*.yaml"
+        ]
+    },
+    "linter": {
+        "enabled": true,
+        "rules": {
+            "recommended": true,
+            "style": {
+                "useBlockStatements":"error",
+                "useImportType": "off",
+                "useNodejsImportProtocol": "off",
+                "noUselessElse": "off",
+                "useTemplate": "warn",
+                "noNonNullAssertion": "off"
+            },
+            "complexity": {
+                "noForEach": "off"
+            }
+        },
+        "ignore": ["venv/", "node_modules", "dist/", "tsconfig.*.json", "tsconfig.json"]
+    },
+    "javascript": {
+        "formatter": {
+            "quoteStyle": "single"
+        }
+    }
+}

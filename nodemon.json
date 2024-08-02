@@ -1,5 +1,5 @@
 {
-  "watch": ["./src", "./.env", "./.env.local"],
-  "ext": "ts,json,yaml",
-  "ignore": ["src/**/*.spec.ts", "node_modules", "dist", "*.tsbuildinfo"]
+    "watch": ["./src"],
+    "ext": "ts,json,yaml",
+    "ignore": ["src/**/*.spec.ts", "node_modules", "dist", "*.tsbuildinfo"]
 }
