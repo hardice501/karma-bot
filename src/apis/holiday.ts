@@ -29,7 +29,6 @@ export async function getHoliday(year: number, month: number): Promise<Holiday> 
         params: queryParams,
     });
     const holidayObject = response.data.response.body;
-    console.log(holidayObject, year, month);
 
     if (!holidayObject.items.item) {
         return {
@@ -84,7 +83,6 @@ export async function getHolidays(
 
     // 모든 요청이 완료될 때까지 대기
     const holidayResults = await Promise.all(promises);
-    console.log(holidayResults);
     // 결과 합치기
     const totalCount = holidayResults.reduce((acc, holiday) => acc + holiday.totalCount, 0);
     const items = holidayResults.flatMap((holiday) => holiday.items);
