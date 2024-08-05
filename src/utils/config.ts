@@ -8,6 +8,7 @@ const environ = [
 ];
 const configFromDotenv = _.get(dotenv.config(), 'parsed');
 const configFromEnv = process.env || {};
+configFromEnv.NODE_ENV = _.split(configFromEnv.NODE_ENV, '.')[0];
 
 export const config = _.assign({}, configFromDotenv, _.pick(configFromEnv, _.keysIn(configFromDotenv).concat(environ)));
 
