@@ -3,7 +3,9 @@ import config from '../utils/config';
 import { WorkPeriodRangeProps } from './date.utils';
 
 export async function getMailPlugData(dateRange?: WorkPeriodRangeProps, name?: string): Promise<string[][]> {
-    const login_url= `${config.get('MAILPLUG_LOGIN_URL')!}?host_domain=${config.get('MAILPLUG_HOST_DOMAIN')!}&cid=${config.get('MAILPLUG_ID')!}`;
+    const login_url = `${config.get('MAILPLUG_LOGIN_URL')!}?host_domain=${config.get(
+        'MAILPLUG_HOST_DOMAIN',
+    )!}&cid=${config.get('MAILPLUG_ID')!}`;
     const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
 
@@ -70,11 +72,13 @@ export async function getMailPlugData(dateRange?: WorkPeriodRangeProps, name?: s
     const nameQuery = name ? `all=${name}` : undefined;
     const dateRangeQuery = dateRange ? `date_end=${dateEndFormated}&date_start=${dateStartFormated}` : undefined;
     let table_url = `${config.get('MAILPLUG_ATTENDANCE_URL')!}?`;
-    if (nameQuery){
-        table_url = `${table_url}${nameQuery}${dateRangeQuery ? `&${dateRangeQuery}&limit=10000&page=1` : '&limit=10000&page=1'}`;
-    }else if (dateRangeQuery){
+    if (nameQuery) {
+        table_url = `${table_url}${nameQuery}${
+            dateRangeQuery ? `&${dateRangeQuery}&limit=10000&page=1` : '&limit=10000&page=1'
+        }`;
+    } else if (dateRangeQuery) {
         table_url = `${table_url}${dateRangeQuery ? `${dateRangeQuery}&limit=10000&page=1` : 'limit=10000&page=1'}`;
-    }else {
+    } else {
         table_url = `${table_url}limit=10000&page=1`;
     }
     console.info(`move to ${table_url}`);

@@ -1,8 +1,8 @@
 import createExpressServer from './libs/createExpressServer';
+import { Attendance } from './models/models';
 import HealthChecker from './resources/healthChecker';
 import Router from './routers/routers';
 import logger from './utils/logger';
-import { Attendance } from './models/models';
 
 const adminAPIServer = createExpressServer(Router);
 const port = adminAPIServer.get('port');

@@ -5,7 +5,8 @@ import addFormats from 'ajv-formats';
 // 더 좋은 방법이 있는지 의견을 여쭙고자 NOTE 남겨봅니다.
 const _ajv = new Ajv({ coerceTypes: true });
 
-export const passwordRegExp = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!\"#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~])[A-Za-z\d!\"#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~]{8,18}$/;
+export const passwordRegExp =
+    /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!\"#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~])[A-Za-z\d!\"#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~]{8,18}$/;
 
 addFormats(_ajv);
 

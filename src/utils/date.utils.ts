@@ -2,32 +2,32 @@ import { addWeeks, differenceInWeeks, format, subDays, subMilliseconds } from 'd
 const START_DATE = new Date('2024-04-01T00:00:00+09:00');
 
 export interface WorkPeriodRangeProps {
-    range_start: Date,
-    range_end: Date,
+    range_start: Date;
+    range_end: Date;
 }
 
 export function getPeriod(date: Date): number {
     return Math.floor(differenceInWeeks(date, START_DATE) / 2) + 1;
 }
 
-export function getWorkPeriodRange(inputDate: Date): WorkPeriodRangeProps{
+export function getWorkPeriodRange(inputDate: Date): WorkPeriodRangeProps {
     const date: Date = inputDate;
     // date.setDate(inputDate.getDate() - 5);
     const today_work_period = getPeriod(date);
 
     let range_start: Date = new Date(date);
     let range_end: Date = new Date(date);
-    for( let i = range_start; getPeriod(i) === today_work_period; ){
+    for (let i = range_start; getPeriod(i) === today_work_period; ) {
         range_start = i;
         i.setDate(i.getDate() - 1);
     }
 
-    for( let i = range_end; getPeriod(i) === today_work_period; ){
+    for (let i = range_end; getPeriod(i) === today_work_period; ) {
         range_end = i;
         i.setDate(i.getDate() + 1);
     }
 
-    return {range_start, range_end};
+    return { range_start, range_end };
 }
 
 export function formateDate(value: number): Date {
