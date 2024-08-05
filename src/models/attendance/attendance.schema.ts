@@ -4,7 +4,7 @@ import { AttendanceFields, AttendanceModel } from './attendance.schema.interface
 const schemaName = 'employees_attendance';
 const AttendanceSchema: Schema<AttendanceFields> = new Schema(
     {
-        name: { type: String, required: true },
+        name: { type: String, required: true, ref: 'employee' },
         /** 근태 날짜 */
         work_date: { type: 'Date', required: true },
         /** 출근 시간 */

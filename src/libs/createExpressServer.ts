@@ -15,7 +15,7 @@ export default function (rootRouter: Router) {
             envFileName += `.${nodeEnv}`;
         }
         logger.info(`Configuration loaded (${envFileName})`, config.value);
-        logger.info(config.get('MYSQL_PASSWORD'));
+        logger.info(config.get('MONGO_ROOT_USERNAME'));
     }
 
     /**

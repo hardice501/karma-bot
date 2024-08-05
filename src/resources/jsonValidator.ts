@@ -10,9 +10,6 @@ export const passwordRegExp =
 
 addFormats(_ajv);
 
-// 전화번호는 국제전화번호(E164 규격) 형식이어야 합니다. 예) +82 1012345678
-// _ajv.addFormat('phone_number', /^\+\d{1,3}(\s\d{0,4})?\s\d{1,14}$/);
-
 // 전화번호는 01012345678 형식이어야 합니다.
 _ajv.addFormat('phone_number', /^\d{3}\d{4}\d{4}$/);
 

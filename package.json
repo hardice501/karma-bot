@@ -14,7 +14,7 @@
         "start": "NODE_ENV=development nodemon --exec ts-node -P tsconfig.json src/server.ts",
         "start:prod": "NODE_ENV=production node ./dist/server.js",
         "lint": "biome lint .",
-        "lint:fix": "biome check --write ./src",
+        "lint:fix": "biome check --apply ./src",
         "biome": "biome"
     },
     "dependencies": {
