@@ -19,7 +19,7 @@ export type Holiday = {
     items: HolidayFields[];
 };
 
-export async function getHoliday(year: number, month: number): Promise<Holiday> {
+async function getRestDeInfo(year: number, month: number): Promise<Holiday> {
     const queryParams = {
         solYear: year,
         solMonth: _.padStart(month.toString(), 2, '0'),
@@ -33,7 +33,15 @@ export async function getHoliday(year: number, month: number): Promise<Holiday> 
     if (!holidayObject.items.item) {
         return {
             totalCount: 0,
-            items: [],
+            items: [
+                {
+                    year,
+                    month,
+                    day: 0,
+                    period: 0,
+                    dateName: '휴일이 없습니다',
+                },
+            ],
         };
     } else {
         const items: HolidayItem[] =
@@ -58,21 +66,23 @@ export async function getHoliday(year: number, month: number): Promise<Holiday> 
     }
 }
 
-export async function getHolidays(
+export async function getRestDeInfos(
     startYear: number,
     startMonth: number,
-    endYear: number,
-    endMonth: number,
+    endYear?: number,
+    endMonth?: number,
 ): Promise<Holiday> {
-    if (startYear > endYear || (startYear === endYear && startMonth > endMonth)) {
+    const targetEndYear = endYear ? endYear : startYear;
+    const targetEndMonth = endMonth ? endMonth : startMonth;
+    if (startYear > targetEndYear || (startYear === targetEndYear && startMonth > targetEndMonth)) {
         throw new Error('Invalid date range');
     }
     const promises: Promise<Holiday>[] = [];
     let currentYear = startYear;
     let currentMonth = startMonth;
     // 각 달에 대한 공휴일 정보를 비동기로 요청하여 Promise 배열에 저장
-    while (currentYear < endYear || (currentYear === endYear && currentMonth <= endMonth)) {
-        promises.push(getHoliday(currentYear, currentMonth));
+    while (currentYear < targetEndYear || (currentYear === targetEndYear && currentMonth <= targetEndMonth)) {
+        promises.push(getRestDeInfo(currentYear, currentMonth));
         // 다음 달로 이동
         currentMonth++;
         if (currentMonth > 12) {
