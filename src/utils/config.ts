@@ -5,6 +5,10 @@ import _ from 'lodash';
 // https://man7.org/linux/man-pages/man7/environ.7.html
 const environ = [
     'NODE_ENV',
+    'MAILPLUG_ID',
+    'MAILPLUG_HOST_DOMAIN',
+    'MAILPLUG_LOGIN_URL',
+    'MAILPLUG_ATTENDANCE_URL'
 ];
 const configFromDotenv = _.get(dotenv.config(), 'parsed');
 const configFromEnv = process.env || {};

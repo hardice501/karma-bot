@@ -1,11 +1,9 @@
 import puppeteer from 'puppeteer';
+import config from '../utils/config';
+import { WorkPeriodRangeProps } from './date.utils';
 
-async function getMailPlugData(dateStart: Date, dateEnd: Date): Promise<void> {
-    const HOST_DOMAIN = 'your_host_domain';
-    const CONFIG_ID = 'your_config_id';
-    const CONFIG_PASSWORD = 'your_password';
-    const login_url = `https://m158.mailplug.com/member/login?host_domain=${HOST_DOMAIN}&cid=${CONFIG_ID}`;
-
+export async function getMailPlugData(dateRange?: WorkPeriodRangeProps, name?: string): Promise<string[][]> {
+    const login_url= `${config.get('MAILPLUG_LOGIN_URL')!}?host_domain=${config.get('MAILPLUG_HOST_DOMAIN')!}&cid=${config.get('MAILPLUG_ID')!}`;
     const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
 
@@ -13,11 +11,10 @@ async function getMailPlugData(dateStart: Date, dateEnd: Date): Promise<void> {
         const args = await Promise.all(msg.args().map((arg) => arg.jsonValue()));
         console.log(args.join(' '));
     });
-
     await page.goto(login_url);
-    console.log('login_url:', login_url);
 
     // XPath를 사용하여 입력 필드에 접근하여 아이디를 입력합니다.
+    const CONFIG_PASSWORD = config.get('MAILPLUG_PASSWORD')!;
     const inputValue = await page.evaluate((CONFIG_PASSWORD: string) => {
         const pwd_inputField = document.evaluate(
             '/html/body/section/div/div[1]/div/div/div[1]/div[2]/form/div[2]/input',
@@ -37,7 +34,7 @@ async function getMailPlugData(dateStart: Date, dateEnd: Date): Promise<void> {
     }, CONFIG_PASSWORD);
 
     if (!inputValue) {
-        return;
+        return [];
     }
 
     // XPath를 사용하여 버튼을 찾아 클릭합니다.
@@ -60,16 +57,27 @@ async function getMailPlugData(dateStart: Date, dateEnd: Date): Promise<void> {
     });
 
     if (!buttonClicked) {
-        return;
+        return [];
     }
 
     // 버튼 클릭 후 페이지 이동을 기다립니다.
     await page.waitForNavigation({ waitUntil: 'networkidle0' });
 
     // 이동된 페이지의 URL을 가져옵니다.
-    const dateStartFormated = dateStart.toISOString();
-    const dateEndFormated = dateEnd.toISOString();
-    const table_url = `https://m158.mailplug.com/ra/worknote/works/list/?date_end=${dateEndFormated}&date_start=${dateStartFormated}&limit=10000&page=1`;
+    const dateStartFormated = dateRange?.range_start.toISOString().split('T')[0];
+    const dateEndFormated = dateRange?.range_end.toISOString().split('T')[0];
+
+    const nameQuery = name ? `all=${name}` : undefined;
+    const dateRangeQuery = dateRange ? `date_end=${dateEndFormated}&date_start=${dateStartFormated}` : undefined;
+    let table_url = `${config.get('MAILPLUG_ATTENDANCE_URL')!}?`;
+    if (nameQuery){
+        table_url = `${table_url}${nameQuery}${dateRangeQuery ? `&${dateRangeQuery}&limit=10000&page=1` : '&limit=10000&page=1'}`;
+    }else if (dateRangeQuery){
+        table_url = `${table_url}${dateRangeQuery ? `${dateRangeQuery}&limit=10000&page=1` : 'limit=10000&page=1'}`;
+    }else {
+        table_url = `${table_url}limit=10000&page=1`;
+    }
+    console.info(`move to ${table_url}`);
     const newUrl = page.url();
     if (newUrl !== login_url) {
         await page.goto(table_url);
@@ -135,10 +143,5 @@ async function getMailPlugData(dateStart: Date, dateEnd: Date): Promise<void> {
     console.log(JSON.stringify(tableData, null, 2));
 
     await browser.close();
+    return tableData;
 }
-
-const mailPlugService = {
-    getMailPlugData,
-};
-
-export default mailPlugService;

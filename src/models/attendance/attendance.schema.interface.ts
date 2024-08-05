@@ -14,15 +14,14 @@ export interface AttendanceFields {
     /** 근태 날짜 */
     work_date: Date;
     /** 출근 시간 */
-    check_in_time: Date;
+    check_in_time?: Date;
     /** 퇴근 시간 */
-    check_out_time: Date;
+    check_out_time?: Date;
     /** 상태 */
     state: string;
 }
 
 export interface AttendanceDocument extends AttendanceFields, Document {
-    id: string;
     _id: string | Types.ObjectId;
 }
 
