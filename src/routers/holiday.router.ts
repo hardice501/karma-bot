@@ -1,9 +1,9 @@
+import { format } from 'date-fns';
 import express, { Request, Response } from 'express';
 import asyncHandler from 'express-async-handler';
 import httpStatus from 'http-status';
 import { getHolidays, updateHolidays } from '../services/holiday.service';
-import { createDateWithKst, getPeriod, getStartAndEndNumberYYYYMM } from '../utils/date.utils';
-import { format } from 'date-fns';
+import { getPeriod, getStartAndEndNumberYYYYMM } from '../utils/date.utils';
 const dayRouter = express.Router();
 
 // url: {{base_url}}/day/holidays?startYear=2024&startMonth=12&endYear=2025&endMonth=01
@@ -33,7 +33,7 @@ dayRouter.get(
     asyncHandler(async (req: Request, res: Response) => {
         let { date } = req.query as { date: string | undefined };
         date = date ? date : format(new Date(), 'yyyy-MM-dd');
-        res.status(httpStatus.OK).json({ period: getPeriod(createDateWithKst(date)) });
+        res.status(httpStatus.OK).json({ period: getPeriod(new Date(date)) });
     }),
 );
 
