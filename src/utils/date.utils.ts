@@ -8,8 +8,8 @@ export interface WorkPeriodRangeProps {
 
 export function getPeriod(date: Date): number {
     // return Math.floor(differenceInWeeks(date, START_DATE) / 2) + 1;
-    const period = Math.floor(date.getTime()/86400000)
-    return Math.floor((period+11)/14);
+    const period = Math.floor(date.getTime() / 86400000);
+    return Math.floor((period + 11) / 14);
 }
 
 export function getWorkPeriodRange(inputDate: Date): WorkPeriodRangeProps {

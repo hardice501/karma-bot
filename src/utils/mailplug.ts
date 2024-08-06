@@ -67,7 +67,9 @@ export async function getMailPlugData(dateRange?: WorkPeriodRangeProps, name?: s
 
     // 이동된 페이지의 URL을 가져옵니다.
     const dateStartFormated = (dateRange?.range_start || new Date()).toLocaleDateString('en-CA');
-    const dateEndFormated = (new Date(Math.min(Date.now(), dateRange?.range_end.getTime() || Date.now()))).toLocaleDateString('en-CA');
+    const dateEndFormated = new Date(
+        Math.min(Date.now(), dateRange?.range_end.getTime() || Date.now()),
+    ).toLocaleDateString('en-CA');
 
     const nameQuery = name ? `all=${name}` : undefined;
     const dateRangeQuery = dateRange ? `date_end=${dateEndFormated}&date_start=${dateStartFormated}` : undefined;

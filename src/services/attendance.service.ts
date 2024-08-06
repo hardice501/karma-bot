@@ -1,20 +1,20 @@
 import { FlattenMaps } from 'mongoose';
+import DataBaseException from '../exceptions/DataBaseException';
+import InternalErrorException from '../exceptions/InternalErrorException';
+import NotFoundException from '../exceptions/NotFoundException';
 import { AttendanceDocument, AttendanceFields } from '../models/attendance/attendance.schema.interface';
 import { Attendance } from '../models/models';
 import MongoConnection from '../resources/karmaCalculator.mongo.connection';
+import config from '../utils/config';
 import { WorkPeriodRangeProps, getWorkPeriodRange } from '../utils/date.utils';
 import { getMailPlugData } from '../utils/mailplug';
-import config from '../utils/config';
-import NotFoundException from '../exceptions/NotFoundException';
-import DataBaseException from '../exceptions/DataBaseException';
-import InternalErrorException from '../exceptions/InternalErrorException';
 
 async function getEmployeeKarma(
     employee_name: string,
     attendanceRange?: WorkPeriodRangeProps,
     retry_cnt?: number,
-// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-): Promise<any>{
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+): Promise<any> {
     const working_period = attendanceRange ? attendanceRange : getWorkPeriodRange(new Date());
     const attendanceList = await getEmployeeAttendanceOnDb(employee_name, working_period);
 
@@ -27,57 +27,62 @@ async function getEmployeeKarma(
     // 필요한 날짜 범위
     const daylist: number[] = [];
     const idx = new Date(working_period.range_start);
-    while(true){
-        if(idx.getTime() >= Math.min(working_period.range_end.getTime(), new Date(new Date().toLocaleString()).getTime())){
+    while (true) {
+        if (
+            idx.getTime() >=
+            Math.min(working_period.range_end.getTime(), new Date(new Date().toLocaleString()).getTime())
+        ) {
             break;
         }
 
-        if(idx.getDay() !== 0 && idx.getDay() !== 6) {
+        if (idx.getDay() !== 0 && idx.getDay() !== 6) {
             daylist.push(new Date(idx.toLocaleDateString()).getTime());
         }
         idx.setDate(idx.getDate() + 1);
     }
     // 없는 데이터 메일플러그 불러오기
-    const emptyDays: number[] = []
+    const emptyDays: number[] = [];
 
-    attendanceList.forEach(attendance=>{
+    attendanceList.forEach((attendance) => {
         //오늘이 아니고 퇴근시간이 포함되어 있으면?
-        if ((attendance.work_date.toLocaleDateString()  !== new Date().toLocaleDateString() && attendance.check_out_time) ||
-            (attendance.work_date.toLocaleDateString() === new Date().toLocaleDateString() && attendance.check_in_time))
-        {
+        if (
+            (attendance.work_date.toLocaleDateString() !== new Date().toLocaleDateString() &&
+                attendance.check_out_time) ||
+            (attendance.work_date.toLocaleDateString() === new Date().toLocaleDateString() && attendance.check_in_time)
+        ) {
             const day = new Date(attendance.work_date.toLocaleDateString()).getTime();
-            const index = daylist.findIndex(d => d === day );
+            const index = daylist.findIndex((d) => d === day);
             if (index !== -1) {
                 daylist.splice(index, 1);
             }
-        //오늘이고 출근시간이 포함되어 있으면?
-        }else{
-            emptyDays.push(attendance.work_date.getTime())
+            //오늘이고 출근시간이 포함되어 있으면?
+        } else {
+            emptyDays.push(attendance.work_date.getTime());
         }
-    })
+    });
 
-    daylist.forEach(day => {
+    daylist.forEach((day) => {
         if (!emptyDays.includes(day)) {
             emptyDays.push(day);
         }
     });
 
-    if(emptyDays.length > 0) {
+    if (emptyDays.length > 0) {
         const fetchRange: WorkPeriodRangeProps = {
             range_start: new Date(Math.min(...emptyDays)),
             range_end: new Date(Math.max(...emptyDays)),
-        }
+        };
         const retryCnt = !retry_cnt ? 1 : retry_cnt + 1;
         await getEmployeeAttendanceOnMailPlug(employee_name, fetchRange);
-        if ( retryCnt < 2) {
+        if (retryCnt < 2) {
             return await getEmployeeKarma(employee_name, attendanceRange, retryCnt);
-        }else {
+        } else {
             throw new InternalErrorException('mailplug crawler error occure');
         }
     }
 
     let today_check_in_time: Date | undefined;
-    const workingTimes = attendanceList.map(attendance=> {
+    const workingTimes = attendanceList.map((attendance) => {
         const workday = attendance.work_date.toLocaleDateString();
 
         let working_time = 0;
@@ -85,7 +90,7 @@ async function getEmployeeKarma(
         let check_in_time = attendance.check_in_time;
         let check_out_time = attendance.check_out_time;
 
-        if(attendance.check_in_time && attendance.check_out_time ) {
+        if (attendance.check_in_time && attendance.check_out_time) {
             const break_time_start = new Date(`${workday} ${lunchTimeStart}`);
             const break_time_end = new Date(`${workday} ${lunchTimeEnd}`);
 
@@ -106,7 +111,7 @@ async function getEmployeeKarma(
             }
 
             if (check_in_time <= break_time_start) {
-                breakTime = break_time_end.getTime() - break_time_start.getTime()
+                breakTime = break_time_end.getTime() - break_time_start.getTime();
             } else if (check_in_time > break_time_end) {
                 breakTime = 0;
             } else {
@@ -119,21 +124,21 @@ async function getEmployeeKarma(
             if (working_time > 10 * 60 * 60 * 1000) {
                 working_time = 10 * 60 * 60 * 1000;
             }
-        }else if (attendance.work_date.toLocaleDateString() === new Date().toLocaleDateString()){
+        } else if (attendance.work_date.toLocaleDateString() === new Date().toLocaleDateString()) {
             today_check_in_time = attendance.check_in_time;
         }
 
         const attendance_state = attendance.state.replace(' ', '').replace('\r', '').replace('\n', '');
-        if (attendance_state.includes('연차')){
+        if (attendance_state.includes('연차')) {
             const vacation = attendance_state.split('-')[1];
-            if (vacation.includes('종일')){
+            if (vacation.includes('종일')) {
                 working_time = working_time + 8 * 60 * 60 * 1000;
-            }else if (vacation.includes('반차')){
+            } else if (vacation.includes('반차')) {
                 working_time = working_time + 4 * 60 * 60 * 1000;
-            }else if (vacation.includes('반반차')){
+            } else if (vacation.includes('반반차')) {
                 working_time = working_time + 2 * 60 * 60 * 1000;
             }
-        }else if(attendance_state.includes('공가')){
+        } else if (attendance_state.includes('공가')) {
             working_time = working_time + 8 * 60 * 60 * 1000;
         }
 
@@ -141,66 +146,72 @@ async function getEmployeeKarma(
             work_date: workday,
             check_in_time: check_in_time,
             check_out_time: check_out_time,
-            working_time: working_time/1000,
+            working_time: working_time / 1000,
             details: {
-                real_working_time: real_working_time/1000,
-                overflow_working_time: (real_working_time - working_time)/1000,
-            }
+                real_working_time: real_working_time / 1000,
+                overflow_working_time: (real_working_time - working_time) / 1000,
+            },
         };
-    })
+    });
 
     let sum_of_working_time = 0;
-    workingTimes.forEach(workingTime =>{
+    workingTimes.forEach((workingTime) => {
         sum_of_working_time += workingTime?.working_time || 0;
     });
-    const sumOfWorkingTime = new Date(sum_of_working_time*1000);
-    const karma_time = sum_of_working_time - Math.floor((Date.now() - working_period.range_start.getTime())/86400000)*8*3600;
+    const sumOfWorkingTime = new Date(sum_of_working_time * 1000);
+    const karma_time =
+        sum_of_working_time - Math.floor((Date.now() - working_period.range_start.getTime()) / 86400000) * 8 * 3600;
 
     let remain_woring_time = 0;
     let remain_karma_time_if_check_out_now = 0;
     let check_out_time_if_use_karma = 0;
     let check_out_time = 0;
 
-    if (!today_check_in_time){
+    if (!today_check_in_time) {
         throw new DataBaseException('need today_check_in_time');
-    }else{
-        check_out_time_if_use_karma = today_check_in_time.getTime() - karma_time*1000 + 8*60*60*1000 + breakTime;
-        remain_karma_time_if_check_out_now = Math.floor((8*60*60*1000 + breakTime - (Date.now() - today_check_in_time.getTime()) +  karma_time*1000)/1000);
-        remain_woring_time = Math.floor((today_check_in_time.getTime() + breakTime + 8*60*60*1000 - Date.now())/1000);
-        check_out_time = today_check_in_time.getTime() + breakTime + 8*60*60*1000;
+    } else {
+        check_out_time_if_use_karma =
+            today_check_in_time.getTime() - karma_time * 1000 + 8 * 60 * 60 * 1000 + breakTime;
+        remain_karma_time_if_check_out_now = Math.floor(
+            (8 * 60 * 60 * 1000 + breakTime - (Date.now() - today_check_in_time.getTime()) + karma_time * 1000) / 1000,
+        );
+        remain_woring_time = Math.floor(
+            (today_check_in_time.getTime() + breakTime + 8 * 60 * 60 * 1000 - Date.now()) / 1000,
+        );
+        check_out_time = today_check_in_time.getTime() + breakTime + 8 * 60 * 60 * 1000;
     }
 
     return {
         employee_name: employee_name,
-        check_out_time : new Date(check_out_time),
-        check_out_time_if_use_karma : new Date(check_out_time_if_use_karma),
+        check_out_time: new Date(check_out_time),
+        check_out_time_if_use_karma: new Date(check_out_time_if_use_karma),
         remain_working_time: {
             total: remain_woring_time,
-            hours: Math.floor(Math.abs(remain_woring_time)/3600),
-            minutes: (Math.floor(Math.abs(remain_woring_time)/60))%60,
-            seconds: Math.abs(remain_woring_time)%60,
+            hours: Math.floor(Math.abs(remain_woring_time) / 3600),
+            minutes: Math.floor(Math.abs(remain_woring_time) / 60) % 60,
+            seconds: Math.abs(remain_woring_time) % 60,
         },
         remain_karma_time_if_check_out_now: {
             total: remain_karma_time_if_check_out_now,
-            isKarma: (remain_karma_time_if_check_out_now < 0),
-            hours: Math.floor(Math.abs(remain_karma_time_if_check_out_now)/3600),
-            minutes: (Math.floor(Math.abs(remain_karma_time_if_check_out_now)/60))%60,
-            seconds: Math.abs(remain_karma_time_if_check_out_now)%60,
+            isKarma: remain_karma_time_if_check_out_now < 0,
+            hours: Math.floor(Math.abs(remain_karma_time_if_check_out_now) / 3600),
+            minutes: Math.floor(Math.abs(remain_karma_time_if_check_out_now) / 60) % 60,
+            seconds: Math.abs(remain_karma_time_if_check_out_now) % 60,
         },
         karma: {
             total: karma_time,
-            isKarma: (karma_time < 0),
-            hours: Math.floor(Math.abs(karma_time)/3600),
-            minutes: (Math.floor(Math.abs(karma_time)/60))%60,
-            seconds: Math.abs(karma_time)%60,
+            isKarma: karma_time < 0,
+            hours: Math.floor(Math.abs(karma_time) / 3600),
+            minutes: Math.floor(Math.abs(karma_time) / 60) % 60,
+            seconds: Math.abs(karma_time) % 60,
         },
         sum_of_working_time: {
             total: sum_of_working_time,
-            hours: Math.floor(sum_of_working_time/3600),
+            hours: Math.floor(sum_of_working_time / 3600),
             minutes: sumOfWorkingTime.getMinutes(),
             seconds: sumOfWorkingTime.getSeconds(),
         },
-        detail_attendance: workingTimes
+        detail_attendance: workingTimes,
     };
 }
 
@@ -215,7 +226,9 @@ async function getEmployeeAttendanceOnDb(
             ...(working_period.range_end && { $lte: working_period.range_end }),
         },
         ...(employee_name && { name: employee_name }),
-    }).lean().exec();
+    })
+        .lean()
+        .exec();
 
     if (!attendance || attendance.length === 0) {
         throw new NotFoundException(`employee not found: ${employee_name}`);
