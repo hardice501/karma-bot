@@ -90,7 +90,9 @@ async function getEmployeeKarma(
         let check_in_time = attendance.check_in_time;
         let check_out_time = attendance.check_out_time;
 
-        if (attendance.check_in_time && attendance.check_out_time) {
+        if (attendance.work_date.toLocaleDateString() === new Date().toLocaleDateString()) {
+            today_check_in_time = attendance.check_in_time;
+        } else if (attendance.check_in_time && attendance.check_out_time) {
             const break_time_start = new Date(`${workday} ${lunchTimeStart}`);
             const break_time_end = new Date(`${workday} ${lunchTimeEnd}`);
 
@@ -124,8 +126,6 @@ async function getEmployeeKarma(
             if (working_time > 10 * 60 * 60 * 1000) {
                 working_time = 10 * 60 * 60 * 1000;
             }
-        } else if (attendance.work_date.toLocaleDateString() === new Date().toLocaleDateString()) {
-            today_check_in_time = attendance.check_in_time;
         }
 
         const attendance_state = attendance.state.replace(' ', '').replace('\r', '').replace('\n', '');
