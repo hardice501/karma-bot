@@ -1,10 +1,10 @@
-export default class DataBaseException extends Error {
+export default class InternalErrorException extends Error {
     details: unknown;
     messages: string | undefined;
     constructor(message?: string, detail?: unknown, error?: unknown) {
-        super('DataBaseException');
+        super('InternalErrorException');
         this.messages = message;
-        this.name = 'DataBaseException';
+        this.name = 'InternalErrorException';
         this.details = detail;
 
         if (typeof error === 'object') {

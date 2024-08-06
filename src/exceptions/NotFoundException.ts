@@ -1,10 +1,10 @@
-export default class DataBaseException extends Error {
+export default class NotFoundException extends Error {
     details: unknown;
     messages: string | undefined;
     constructor(message?: string, detail?: unknown, error?: unknown) {
-        super('DataBaseException');
+        super('NotFoundException');
         this.messages = message;
-        this.name = 'DataBaseException';
+        this.name = 'NotFoundException';
         this.details = detail;
 
         if (typeof error === 'object') {
