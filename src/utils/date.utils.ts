@@ -7,23 +7,25 @@ export interface WorkPeriodRangeProps {
 }
 
 export function getPeriod(date: Date): number {
-    return Math.floor(differenceInWeeks(date, START_DATE) / 2) + 1;
+    // return Math.floor(differenceInWeeks(date, START_DATE) / 2) + 1;
+    const period = Math.floor(date.getTime() / 86400000);
+    return Math.floor((period + 11) / 14);
 }
 
 export function getWorkPeriodRange(inputDate: Date): WorkPeriodRangeProps {
-    const date: Date = inputDate;
-    // date.setDate(inputDate.getDate() - 5);
+    const date: Date = new Date(inputDate.toLocaleDateString());
+    // date.setDate(inputDate.getDate() - 7);/
     const today_work_period = getPeriod(date);
 
     let range_start: Date = new Date(date);
     let range_end: Date = new Date(date);
-    for (let i = range_start; getPeriod(i) === today_work_period; ) {
-        range_start = i;
+    for (let i = new Date(range_start); getPeriod(i) === today_work_period; ) {
+        range_start = new Date(i);
         i.setDate(i.getDate() - 1);
     }
 
     for (let i = range_end; getPeriod(i) === today_work_period; ) {
-        range_end = i;
+        range_end = new Date(i);
         i.setDate(i.getDate() + 1);
     }
 

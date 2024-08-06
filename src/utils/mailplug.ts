@@ -66,8 +66,10 @@ export async function getMailPlugData(dateRange?: WorkPeriodRangeProps, name?: s
     await page.waitForNavigation({ waitUntil: 'networkidle0' });
 
     // 이동된 페이지의 URL을 가져옵니다.
-    const dateStartFormated = dateRange?.range_start.toISOString().split('T')[0];
-    const dateEndFormated = dateRange?.range_end.toISOString().split('T')[0];
+    const dateStartFormated = (dateRange?.range_start || new Date()).toLocaleDateString('en-CA');
+    const dateEndFormated = new Date(
+        Math.min(Date.now(), dateRange?.range_end.getTime() || Date.now()),
+    ).toLocaleDateString('en-CA');
 
     const nameQuery = name ? `all=${name}` : undefined;
     const dateRangeQuery = dateRange ? `date_end=${dateEndFormated}&date_start=${dateStartFormated}` : undefined;
@@ -142,9 +144,6 @@ export async function getMailPlugData(dateRange?: WorkPeriodRangeProps, name?: s
 
         return datas;
     });
-
-    // 데이터를 보기 쉽게 JSON 문자열로 변환하여 출력
-    console.log(JSON.stringify(tableData, null, 2));
 
     await browser.close();
     return tableData;
