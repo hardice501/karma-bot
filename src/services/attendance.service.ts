@@ -9,6 +9,37 @@ import config from '../utils/config';
 import { WorkPeriodRangeProps, getWorkPeriodRange } from '../utils/date.utils';
 import { getMailPlugData } from '../utils/mailplug';
 
+class CralwerEventStore<T> {
+    private store: { [key: string]: T } = {};
+    private initialValue: T;
+
+    constructor(initialValue: T) {
+        this.initialValue = initialValue;
+    }
+
+    // 값 저장
+    set(key: string, value: T): void {
+        this.store[key] = value;
+    }
+
+    // 값 검색
+    get(key: string): T {
+        return this.store[key] !== undefined ? this.store[key] : this.initialValue;
+    }
+
+    // 키가 존재하는지 확인
+    has(key: string): boolean {
+        return key in this.store;
+    }
+
+    // 키-값 쌍 삭제
+    delete(key: string): void {
+        delete this.store[key];
+    }
+}
+// 사용 예시
+const cralwerEventStore = new CralwerEventStore<boolean>(false);
+
 async function getEmployeeKarma(
     employee_name: string,
     attendanceRange?: WorkPeriodRangeProps,
@@ -29,12 +60,12 @@ async function getEmployeeKarma(
     const idx = new Date(working_period.range_start);
     while (true) {
         if (
-            idx.getTime() >=
-            Math.min(working_period.range_end.getTime(), new Date(new Date().toLocaleString()).getTime())
+            idx.getTime() >= Math.min(working_period.range_end.getTime(), new Date(new Date().toLocaleDateString()).getTime())
         ) {
             break;
         }
 
+        // 일요일, 토요일 제외하고 push
         if (idx.getDay() !== 0 && idx.getDay() !== 6) {
             daylist.push(new Date(idx.toLocaleDateString()).getTime());
         }
@@ -42,22 +73,28 @@ async function getEmployeeKarma(
     }
     // 없는 데이터 메일플러그 불러오기
     const emptyDays: number[] = [];
-
     attendanceList.forEach((attendance) => {
-        //오늘이 아니고 퇴근시간이 포함되어 있으면?
-        if (
-            (attendance.work_date.toLocaleDateString() !== new Date().toLocaleDateString() &&
-                attendance.check_out_time) ||
-            (attendance.work_date.toLocaleDateString() === new Date().toLocaleDateString() && attendance.check_in_time)
-        ) {
+        if(attendance.updated_at.getTime() +  5* 60000 < Date.now()){
+            //오늘이 아니고 퇴근시간이 포함되어 있으면? or 오늘이고 출근시간이 포함되어 있으면?
+            if (
+                (attendance.work_date.toLocaleDateString() !== new Date().toLocaleDateString() &&
+                    attendance.check_out_time) ||
+                (attendance.work_date.toLocaleDateString() === new Date().toLocaleDateString() && attendance.check_in_time)
+            ) {
+                const day = new Date(attendance.work_date.toLocaleDateString()).getTime();
+                const index = daylist.findIndex((d) => d === day);
+                if (index !== -1) {
+                    daylist.splice(index, 1);
+                }
+            } else {
+                emptyDays.push(attendance.work_date.getTime());
+            }
+        }else{
             const day = new Date(attendance.work_date.toLocaleDateString()).getTime();
             const index = daylist.findIndex((d) => d === day);
             if (index !== -1) {
                 daylist.splice(index, 1);
             }
-            //오늘이고 출근시간이 포함되어 있으면?
-        } else {
-            emptyDays.push(attendance.work_date.getTime());
         }
     });
 
@@ -73,8 +110,10 @@ async function getEmployeeKarma(
             range_end: new Date(Math.max(...emptyDays)),
         };
         const retryCnt = !retry_cnt ? 1 : retry_cnt + 1;
-        await getEmployeeAttendanceOnMailPlug(employee_name, fetchRange);
-        if (retryCnt < 2) {
+        if (retryCnt < 2 && !cralwerEventStore.get(employee_name)) {
+            cralwerEventStore.set(employee_name, true);
+            await getEmployeeAttendanceOnMailPlug(employee_name, fetchRange);
+            cralwerEventStore.set(employee_name, false);
             return await getEmployeeKarma(employee_name, attendanceRange, retryCnt);
         } else {
             throw new InternalErrorException('mailplug crawler error occure');
@@ -170,15 +209,10 @@ async function getEmployeeKarma(
     if (!today_check_in_time) {
         throw new DataBaseException('need today_check_in_time');
     } else {
-        check_out_time_if_use_karma =
-            today_check_in_time.getTime() - karma_time * 1000 + 8 * 60 * 60 * 1000 + breakTime;
-        remain_karma_time_if_check_out_now = Math.floor(
-            (8 * 60 * 60 * 1000 + breakTime - (Date.now() - today_check_in_time.getTime()) + karma_time * 1000) / 1000,
-        );
-        remain_woring_time = Math.floor(
-            (today_check_in_time.getTime() + breakTime + 8 * 60 * 60 * 1000 - Date.now()) / 1000,
-        );
         check_out_time = today_check_in_time.getTime() + breakTime + 8 * 60 * 60 * 1000;
+        remain_woring_time = Math.floor((check_out_time - Date.now()) / 1000);
+        remain_karma_time_if_check_out_now = Math.floor((Date.now() - check_out_time)/1000) + karma_time;
+        check_out_time_if_use_karma = Math.floor((check_out_time + karma_time) / 1000);
     }
 
     return {
@@ -218,17 +252,16 @@ async function getEmployeeKarma(
 async function getEmployeeAttendanceOnDb(
     employee_name?: string,
     attendanceRange?: WorkPeriodRangeProps,
-): Promise<AttendanceFields[]> {
+): Promise<FlattenMaps<AttendanceDocument>[]> {
     const working_period = attendanceRange ? attendanceRange : getWorkPeriodRange(new Date());
-    const attendance = await Attendance.find({
+    const attendance: FlattenMaps<AttendanceDocument>[] = await Attendance.find({
         work_date: {
             ...(working_period.range_start && { $gte: working_period.range_start }),
             ...(working_period.range_end && { $lte: working_period.range_end }),
         },
         ...(employee_name && { name: employee_name }),
     })
-        .lean()
-        .exec();
+        .lean();
 
     if (!attendance || attendance.length === 0) {
         throw new NotFoundException(`employee not found: ${employee_name}`);
@@ -288,7 +321,10 @@ async function getEmployeeAttendanceOnMailPlug(
                 return {
                     updateOne: {
                         filter: { name, work_date },
-                        update: rest,
+                        update: {
+                            updated_at: Date.now(),
+                            ...rest
+                        },
                         upsert: true,
                     },
                 };

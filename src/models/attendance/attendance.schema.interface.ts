@@ -23,6 +23,7 @@ export interface AttendanceFields {
 
 export interface AttendanceDocument extends AttendanceFields, Document {
     _id: string | Types.ObjectId;
+    updated_at: Date;
 }
 
 export interface AttendanceModel extends Model<AttendanceDocument> {}
