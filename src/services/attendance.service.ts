@@ -60,7 +60,8 @@ async function getEmployeeKarma(
     const idx = new Date(working_period.range_start);
     while (true) {
         if (
-            idx.getTime() >= Math.min(working_period.range_end.getTime(), new Date(new Date().toLocaleDateString()).getTime())
+            idx.getTime() >=
+            Math.min(working_period.range_end.getTime(), new Date(new Date().toLocaleDateString()).getTime())
         ) {
             break;
         }
@@ -74,12 +75,13 @@ async function getEmployeeKarma(
     // 없는 데이터 메일플러그 불러오기
     const emptyDays: number[] = [];
     attendanceList.forEach((attendance) => {
-        if(attendance.updated_at.getTime() +  5* 60000 < Date.now()){
+        if (attendance.updated_at.getTime() + 5 * 60000 < Date.now()) {
             //오늘이 아니고 퇴근시간이 포함되어 있으면? or 오늘이고 출근시간이 포함되어 있으면?
             if (
                 (attendance.work_date.toLocaleDateString() !== new Date().toLocaleDateString() &&
                     attendance.check_out_time) ||
-                (attendance.work_date.toLocaleDateString() === new Date().toLocaleDateString() && attendance.check_in_time)
+                (attendance.work_date.toLocaleDateString() === new Date().toLocaleDateString() &&
+                    attendance.check_in_time)
             ) {
                 const day = new Date(attendance.work_date.toLocaleDateString()).getTime();
                 const index = daylist.findIndex((d) => d === day);
@@ -89,7 +91,7 @@ async function getEmployeeKarma(
             } else {
                 emptyDays.push(attendance.work_date.getTime());
             }
-        }else{
+        } else {
             const day = new Date(attendance.work_date.toLocaleDateString()).getTime();
             const index = daylist.findIndex((d) => d === day);
             if (index !== -1) {
@@ -211,7 +213,7 @@ async function getEmployeeKarma(
     } else {
         check_out_time = today_check_in_time.getTime() + breakTime + 8 * 60 * 60 * 1000;
         remain_woring_time = Math.floor((check_out_time - Date.now()) / 1000);
-        remain_karma_time_if_check_out_now = Math.floor((Date.now() - check_out_time)/1000) + karma_time;
+        remain_karma_time_if_check_out_now = Math.floor((Date.now() - check_out_time) / 1000) + karma_time;
         check_out_time_if_use_karma = Math.floor((check_out_time + karma_time) / 1000);
     }
 
@@ -260,8 +262,7 @@ async function getEmployeeAttendanceOnDb(
             ...(working_period.range_end && { $lte: working_period.range_end }),
         },
         ...(employee_name && { name: employee_name }),
-    })
-        .lean();
+    }).lean();
 
     if (!attendance || attendance.length === 0) {
         throw new NotFoundException(`employee not found: ${employee_name}`);
@@ -323,7 +324,7 @@ async function getEmployeeAttendanceOnMailPlug(
                         filter: { name, work_date },
                         update: {
                             updated_at: Date.now(),
-                            ...rest
+                            ...rest,
                         },
                         upsert: true,
                     },
