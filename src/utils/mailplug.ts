@@ -63,7 +63,7 @@ export async function getMailPlugData(dateRange?: WorkPeriodRangeProps, name?: s
     }
 
     // 버튼 클릭 후 페이지 이동을 기다립니다.
-    await page.waitForNavigation({ waitUntil: 'networkidle0' });
+    await page.waitForNavigation();
 
     // 이동된 페이지의 URL을 가져옵니다.
     const dateStartFormated = (dateRange?.range_start || new Date()).toLocaleDateString('en-CA');
@@ -73,25 +73,35 @@ export async function getMailPlugData(dateRange?: WorkPeriodRangeProps, name?: s
 
     const nameQuery = name ? `all=${name}` : undefined;
     const dateRangeQuery = dateRange ? `date_end=${dateEndFormated}&date_start=${dateStartFormated}` : undefined;
-    let table_url = `${config.get('MAILPLUG_ATTENDANCE_URL')!}?`;
+    let table_url1 = `${config.get('MAILPLUG_ATTENDANCE_URL1')!}?`;
+    let table_url2 = `${config.get('MAILPLUG_ATTENDANCE_URL2')!}?`;
+
     if (nameQuery) {
-        table_url = `${table_url}${nameQuery}${
-            dateRangeQuery ? `&${dateRangeQuery}&limit=10000&page=1` : '&limit=10000&page=1'
-        }`;
+        table_url1 = `${table_url1}${nameQuery}${dateRangeQuery ? `&${dateRangeQuery}&limit=30&page=1` : '&limit=1000&page=1'}`;
+        table_url2 = `${table_url2}${nameQuery}${dateRangeQuery ? `&${dateRangeQuery}&limit=30&page=1` : '&limit=1000&page=1'}`;
     } else if (dateRangeQuery) {
-        table_url = `${table_url}${dateRangeQuery ? `${dateRangeQuery}&limit=10000&page=1` : 'limit=10000&page=1'}`;
+        table_url1 = `${table_url1}${dateRangeQuery ? `${dateRangeQuery}&limit=1000&page=1` : 'limit=1000&page=1'}`;
+        table_url2 = `${table_url2}${dateRangeQuery ? `${dateRangeQuery}&limit=1000&page=1` : 'limit=1000&page=1'}`;
     } else {
-        table_url = `${table_url}limit=10000&page=1`;
+        table_url1 = `${table_url1}limit=50&page=1`;
+        table_url2 = `${table_url2}limit=50&page=1`;
     }
-    console.info(`move to ${table_url}`);
+    console.info(`move to ${table_url2}`);
     const newUrl = page.url();
     if (newUrl !== login_url) {
-        await page.goto(table_url);
-        console.log('새로운 URL로 이동했습니다:', table_url);
+        await page.goto(table_url2);
+        console.log('새로운 URL로 이동했습니다 1:', page.url());
     }
 
     // 테이블 데이터를 가져오기 위해 페이지가 로드될 때까지 대기합니다.
-    await page.waitForSelector('table tbody tr');
+    try{
+        await page.waitForSelector('table tbody tr');
+    }catch(error){
+        await page.goto(table_url1);
+        console.log('새로운 URL로 이동했습니다 2:', page.url());
+        await page.waitForSelector('table tbody tr');
+    }
+
     await page.evaluate(() => {
         const hoverElements = document.querySelectorAll('.work-status');
         hoverElements.forEach((element) => {
@@ -102,6 +112,20 @@ export async function getMailPlugData(dateRange?: WorkPeriodRangeProps, name?: s
             });
             element.dispatchEvent(event);
         });
+        hoverElements.forEach(element => {
+            // 각 요소에 대해 mouseenter 이벤트를 트리거하여 툴팁을 표시
+            const event = new MouseEvent('mouseenter', {
+              bubbles: true,
+              cancelable: true,
+              view: window
+            });
+          
+            // 툴팁이 사라지지 않도록 mouseleave 이벤트를 차단
+            element.addEventListener('mouseleave', (e) => {
+              e.stopImmediatePropagation();
+            });
+            element.dispatchEvent(event);
+          });
     });
 
     // 테이블의 모든 값을 가져옵니다.
@@ -146,5 +170,7 @@ export async function getMailPlugData(dateRange?: WorkPeriodRangeProps, name?: s
     });
 
     await browser.close();
+    console.log('tableData', tableData);
+
     return tableData;
 }

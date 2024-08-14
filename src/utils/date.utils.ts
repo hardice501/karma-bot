@@ -74,3 +74,23 @@ export function getStartAndEndNumberYYYYMM({
     const endMonthNum = endMonth ? Number(endMonth) : startMonthNum;
     return { startYearNum, startMonthNum, endYearNum, endMonthNum };
 }
+
+export function countWeekdaysInRange(rangeStart: Date, rangeEnd: Date): number {
+    let count = 0;
+    let currentDate = new Date(rangeStart);
+
+    // 반복문으로 시작일부터 종료일까지 하루씩 증가시키며 검사
+    while (currentDate <= rangeEnd) {
+        const dayOfWeek = currentDate.getDay();
+
+        // 주말(토요일: 6, 일요일: 0)을 제외한 날만 카운트
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+            count++;
+        }
+
+        // 날짜를 하루씩 증가
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    return count;
+}

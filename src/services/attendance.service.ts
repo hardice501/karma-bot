@@ -6,8 +6,9 @@ import { AttendanceDocument, AttendanceFields } from '../models/attendance/atten
 import { Attendance } from '../models/models';
 import MongoConnection from '../resources/karmaCalculator.mongo.connection';
 import config from '../utils/config';
-import { WorkPeriodRangeProps, getWorkPeriodRange } from '../utils/date.utils';
+import { WorkPeriodRangeProps, countWeekdaysInRange, getWorkPeriodRange } from '../utils/date.utils';
 import { getMailPlugData } from '../utils/mailplug';
+import logger from '../utils/logger';
 
 class CralwerEventStore<T> {
     private store: { [key: string]: T } = {};
@@ -58,24 +59,25 @@ async function getEmployeeKarma(
     // 필요한 날짜 범위
     const daylist: number[] = [];
     const idx = new Date(working_period.range_start);
+    // console.log(working_period.range_start.toLocaleDateString(), working_period.range_end.toLocaleDateString(), )
     while (true) {
+        // console.log(idx.toLocaleDateString(), idx.getDay());
         if (
-            idx.getTime() >=
-            Math.min(working_period.range_end.getTime(), new Date(new Date().toLocaleDateString()).getTime())
+            idx.getTime() > Math.min(working_period.range_end.getTime(), new Date(new Date().toLocaleDateString()).getTime())
         ) {
             break;
         }
-
         // 일요일, 토요일 제외하고 push
         if (idx.getDay() !== 0 && idx.getDay() !== 6) {
             daylist.push(new Date(idx.toLocaleDateString()).getTime());
         }
         idx.setDate(idx.getDate() + 1);
     }
+
     // 없는 데이터 메일플러그 불러오기
     const emptyDays: number[] = [];
     attendanceList.forEach((attendance) => {
-        if (attendance.updated_at.getTime() + 5 * 60000 < Date.now()) {
+        if (attendance.updated_at.getTime() + 15 * 60000 < Date.now()) {
             //오늘이 아니고 퇴근시간이 포함되어 있으면? or 오늘이고 출근시간이 포함되어 있으면?
             if (
                 (attendance.work_date.toLocaleDateString() !== new Date().toLocaleDateString() &&
@@ -100,12 +102,14 @@ async function getEmployeeKarma(
         }
     });
 
+    // daylist.forEach(day=>{console.log('d:', new Date(day).toLocaleString())})
     daylist.forEach((day) => {
         if (!emptyDays.includes(day)) {
             emptyDays.push(day);
         }
     });
-
+    // emptyDays.forEach(day=>{console.log('e:', new Date(day).toLocaleString())})
+    
     if (emptyDays.length > 0) {
         const fetchRange: WorkPeriodRangeProps = {
             range_start: new Date(Math.min(...emptyDays)),
@@ -200,8 +204,11 @@ async function getEmployeeKarma(
         sum_of_working_time += workingTime?.working_time || 0;
     });
     const sumOfWorkingTime = new Date(sum_of_working_time * 1000);
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+
     const karma_time =
-        sum_of_working_time - Math.floor((Date.now() - working_period.range_start.getTime()) / 86400000) * 8 * 3600;
+        sum_of_working_time - countWeekdaysInRange(working_period.range_start, yesterday) * 8 * 3600;
 
     let remain_woring_time = 0;
     let remain_karma_time_if_check_out_now = 0;
@@ -283,7 +290,7 @@ async function getEmployeeAttendanceOnMailPlug(
     mailplug_data.forEach((value) => {
         if (value.length === 7) {
             const name = value[1].split(' ')[0];
-            const check_in_time: Date = new Date(`${value[0]} ${value[3]}`);
+            const check_in_time: Date = new Date(`20${value[0]} ${value[3]}`);
             let isValidCheckOut: boolean;
             let check_out_time: Date;
             if (value[4].includes(')')) {
@@ -300,7 +307,7 @@ async function getEmployeeAttendanceOnMailPlug(
                 check_out_time = new Date(`${value[4]}`);
             } else {
                 isValidCheckOut = true;
-                check_out_time = new Date(`${value[0]} ${value[4]}`);
+                check_out_time = new Date(`20${value[0]} ${value[4]}`);
             }
 
             attendances.push({
@@ -308,10 +315,11 @@ async function getEmployeeAttendanceOnMailPlug(
                 check_out_time: Number.isNaN(check_out_time.getTime()) ? undefined : check_out_time,
                 name: name,
                 state: value[6],
-                work_date: new Date(value[0]),
+                work_date: new Date(`20${value[0]}`),
             });
         }
     });
+    console.log('attendances', attendances);
 
     const session = await MongoConnection.startSession();
     session.startTransaction();
@@ -335,6 +343,7 @@ async function getEmployeeAttendanceOnMailPlug(
         await session.commitTransaction();
     } catch (error: unknown) {
         await session.abortTransaction();
+        logger.error(error)
         throw new Error('Failed to update candidates');
     } finally {
         await session.endSession();
